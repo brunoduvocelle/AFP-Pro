@@ -282,8 +282,7 @@
             copyNews() {
                 const txt = this.data.sort((a,b) => b.timestamp - a.timestamp).map(i => `[${i.s}] ${i.t}\n${i.l}`).join('\n\n');
                 navigator.clipboard.writeText(txt);
-                alert("Synthèse copiée.");
-            }
+                            }
         };
 
         App.init();
