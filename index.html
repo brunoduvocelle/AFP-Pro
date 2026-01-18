@@ -2,126 +2,170 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>AFP PRO - Scan Haute Disponibilité</title>
+    <title>AFP PRO - Résilience Totale</title>
     <style>
         :root {
             --bg: #050505; --card: #111; --border: #222;
             --accent: #0070f3; --text: #eee; --scan: #00ff41; --err: #ff4444;
         }
         body { 
-            font-family: system-ui, sans-serif; background: var(--bg); color: var(--text);
+            font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text);
             display: grid; grid-template-columns: 1fr 380px; height: 100vh; margin: 0;
         }
-        #feed { padding: 30px; overflow-y: auto; border-right: 1px solid var(--border); }
-        aside { background: #000; display: flex; flex-direction: column; padding: 20px; }
-        .monitor { background: #0a0a0a; border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px; }
-        .log-area { flex: 1; overflow-y: auto; font-family: monospace; font-size: 11px; color: #555; border-top: 1px solid var(--border); padding-top: 10px; }
-        .log-entry.fail { color: var(--err); }
-        .log-entry.ok { color: var(--scan); }
-        .news-card { background: var(--card); border: 1px solid var(--border); padding: 15px; margin-bottom: 10px; border-radius: 8px; animation: slide 0.3s ease; }
+        /* --- Flux Principal --- */
+        #feed { padding: 30px; overflow-y: auto; border-right: 1px solid var(--border); background: #080808; }
+        .news-card { 
+            background: var(--card); border: 1px solid var(--border); padding: 20px; 
+            margin-bottom: 12px; border-radius: 8px; animation: slide 0.3s ease; 
+            border-left: 3px solid #333; transition: 0.2s;
+        }
+        .news-card:hover { border-left-color: var(--accent); background: #161616; }
         @keyframes slide { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
-        button { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
-        .source-tag { font-size: 10px; color: var(--accent); font-weight: bold; text-transform: uppercase; }
+        
+        /* --- Barre Latérale --- */
+        aside { background: #000; display: flex; flex-direction: column; padding: 20px; border-left: 1px solid var(--border); }
+        .monitor { background: #0a0a0a; border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+        .log-area { flex: 1; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 10px; color: #555; border-top: 1px solid #111; padding-top: 10px; }
+        .log-entry.fail { color: var(--err); }
+        .log-entry.ok { color: var(--scan); font-weight: bold; }
+        
+        button { 
+            width: 100%; padding: 12px; background: var(--accent); color: white; 
+            border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 8px;
+        }
+        .btn-secondary { background: #222; color: #ccc; }
+        .btn-secondary:hover { background: #333; }
+
+        .source-tag { font-size: 10px; color: var(--accent); font-weight: 800; text-transform: uppercase; margin-bottom: 5px; display: block; }
+        .timestamp { font-size: 10px; color: #555; float: right; }
     </style>
 </head>
 <body>
 
     <main id="feed">
-        <div style="text-align:center; padding-top:100px; color:#444;">
-            <h2>Système de Veille Multilflux</h2>
-            <p>Cliquez sur "Lancer" pour contourner les blocages CORS.</p>
+        <div id="welcome" style="text-align:center; margin-top:30vh; color:#333;">
+            <h2>VEILLE PRO - SYSTÈME RÉSILIENT</h2>
+            <p>Le système va tenter de contourner les blocages des éditorialistes.</p>
         </div>
     </main>
 
     <aside>
         <div class="monitor">
-            <div style="font-size:10px; color:#666; margin-bottom:5px;">MÉMOIRE ACTIVE</div>
-            <div id="count" style="font-size:32px; font-weight:bold; color:var(--scan);">0</div>
-            <button onclick="App.run()">Lancer le Monitoring</button>
-            <button style="background:#333;" onclick="App.copyAll()">Concatenation Totale</button>
+            <div style="font-size:10px; color:#666; letter-spacing:1px; margin-bottom:5px;">MÉMOIRE COLLECTÉE</div>
+            <div id="count" style="font-size:36px; font-weight:bold; color:var(--scan); margin-bottom:15px;">0</div>
+            
+            <button onclick="App.run()">Démarrer le Scan Forcé</button>
+            <button class="btn-secondary" onclick="App.copyFullReport()">Concaténation Intégrale</button>
+            
+            <select id="freq" style="width:100%; background:#111; color:var(--scan); border:1px solid #333; padding:5px; font-size:11px;" onchange="App.setFreq(this.value)">
+                <option value="45000">Actualisation : 45s</option>
+                <option value="90000">Actualisation : 1.5m</option>
+                <option value="300000">Actualisation : 5m</option>
+            </select>
         </div>
         <div class="log-area" id="logs"></div>
     </aside>
 
     <script>
         const App = {
-            data: [],
-            seen: new Set(),
+            storage: [],
+            registry: new Set(),
+            timer: null,
             sources: [
                 { n: "Le Monde", u: "https://www.lemonde.fr/rss/une.xml" },
                 { n: "Le Figaro", u: "https://www.lefigaro.fr/rss/figaro_actualites.xml" },
                 { n: "Les Echos", u: "https://services.lesechos.fr/rss/les-echos-economie.xml" },
                 { n: "BFMTV", u: "https://www.bfmtv.com/rss/info/flux-rss/flux-toutes-les-infos/" },
-                { n: "France 24", u: "https://www.france24.com/fr/actualites/rss" }
+                { n: "France 24", u: "https://www.france24.com/fr/actualites/rss" },
+                { n: "Google News", u: "https://news.google.com/rss?hl=fr&gl=FR&ceid=FR:fr" }
             ],
 
-            log(m, cl = '') {
-                const e = document.getElementById('logs');
+            log(m, type = '') {
+                const l = document.getElementById('logs');
                 const d = document.createElement('div');
-                d.className = `log-entry ${cl}`;
+                d.className = `log-entry ${type}`;
                 d.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
-                e.prepend(d);
+                l.prepend(d);
             },
 
-            async fetchWithFallback(url) {
-                // Tentative 1: rss2json
+            async fetchSource(src) {
+                // Stratégie 1 : RSS2JSON avec cache-buster
                 try {
-                    const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&api_key=00000000000000000000000000000000`);
+                    const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(src.u)}&_t=${Date.now()}`);
                     const j = await r.json();
-                    if (j.status === 'ok') return j.items;
+                    if (j.status === 'ok') return j.items.map(i => ({ t: i.title, d: i.description, l: i.link, s: src.n, p: i.pubDate }));
                 } catch(e) {}
 
-                // Tentative 2: Proxy AllOrigins (Contournement CORS)
+                // Stratégie 2 (Repli) : AllOrigins + Manuel Parsing (Contourne CORS)
                 try {
-                    const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+                    const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(src.u)}&_t=${Date.now()}`);
                     const j = await r.json();
-                    const parser = new DOMParser();
-                    const xml = parser.parseFromString(j.contents, "text/xml");
-                    const items = Array.from(xml.querySelectorAll("item")).map(i => ({
-                        title: i.querySelector("title")?.textContent,
-                        description: i.querySelector("description")?.textContent,
-                        pubDate: i.querySelector("pubDate")?.textContent,
-                        link: i.querySelector("link")?.textContent
+                    const doc = new DOMParser().parseFromString(j.contents, "text/xml");
+                    return Array.from(doc.querySelectorAll("item")).map(i => ({
+                        t: i.querySelector("title")?.textContent,
+                        d: i.querySelector("description")?.textContent || "",
+                        l: i.querySelector("link")?.textContent,
+                        s: src.n,
+                        p: i.querySelector("pubDate")?.textContent
                     }));
-                    return items;
                 } catch(e) { return null; }
             },
 
             async run() {
-                document.getElementById('feed').innerHTML = '';
-                this.log("Initialisation du scan résilient...");
+                document.getElementById('welcome').style.display = 'none';
+                this.log(`Lancement du cycle sur ${this.sources.length} sources...`);
                 
+                let totalNew = 0;
+
                 for (const src of this.sources) {
-                    const items = await this.fetchWithFallback(src.u);
-                    if (items) {
-                        this.log(`Succès : ${src.n}`, 'ok');
+                    const items = await this.fetchSource(src);
+                    if (items && items.length > 0) {
+                        this.log(`Connecté : ${src.n}`, 'ok');
                         items.forEach(item => {
-                            const id = btoa(unescape(encodeURIComponent(item.title))).substring(0, 20);
-                            if (!this.seen.has(id)) {
-                                this.seen.add(id);
-                                item.source = src.n;
-                                this.data.push(item);
+                            const hash = btoa(unescape(encodeURIComponent(item.t))).substring(0, 24);
+                            if (!this.registry.has(hash)) {
+                                this.registry.add(hash);
+                                this.storage.push(item);
                                 this.render(item);
+                                totalNew++;
                             }
                         });
                     } else {
-                        this.log(`Échec Critique : ${src.n}`, 'fail');
+                        this.log(`Blocage persistant : ${src.n}`, 'fail');
                     }
                 }
-                document.getElementById('count').textContent = this.seen.size;
+                
+                document.getElementById('count').textContent = this.registry.size;
+                if (totalNew > 0) this.log(`${totalNew} nouvelles entrées`, 'ok');
+                this.setFreq(document.getElementById('freq').value);
             },
 
             render(i) {
+                const f = document.getElementById('feed');
                 const c = document.createElement('div');
+                const date = i.p ? new Date(i.p).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--';
                 c.className = 'news-card';
-                c.innerHTML = `<div class="source-tag">${i.source}</div><div style="font-weight:bold;margin:5px 0;">${i.title}</div><div style="font-size:12px;color:#888;">${(i.description||"").replace(/<[^>]*>?/gm, '').substring(0,120)}...</div>`;
-                document.getElementById('feed').prepend(c);
+                c.innerHTML = `
+                    <span class="timestamp">${date}</span>
+                    <span class="source-tag">${i.s}</span>
+                    <div style="font-weight:700; font-size:1.1rem; margin-bottom:8px;">${i.t}</div>
+                    <div style="font-size:13px; color:#888; line-height:1.4;">${i.d.replace(/<[^>]*>?/gm, '').substring(0, 160)}...</div>
+                `;
+                f.prepend(c);
             },
 
-            copyAll() {
-                const txt = this.data.map(i => `[${i.source}] ${i.title}\n${i.link}`).join('\n\n');
-                navigator.clipboard.writeText(txt);
-                alert("Tout est copié (" + this.data.length + " dépêches)");
+            copyFullReport() {
+                if(this.storage.length === 0) return alert("Mémoire vide.");
+                const report = this.storage.reverse().map((i, idx) => 
+                    `--- INFO ${idx+1} [${i.s}] ---\nTITRE : ${i.t}\nLIEN : ${i.l}\n`
+                ).join('\n');
+                navigator.clipboard.writeText(report);
+                alert(`Rapport copié : ${this.storage.length} dépêches.`);
+            },
+
+            setFreq(ms) {
+                if (this.timer) clearInterval(this.timer);
+                this.timer = setInterval(() => this.run(), parseInt(ms));
             }
         };
     </script>
