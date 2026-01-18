@@ -2,273 +2,233 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARCHITECTE WEB - Veille Stratégique PRO</title>
+    <title>AFP PRO - Veille Intégrale & Scan Dynamique</title>
     <style>
         :root {
-            --bg: #0a0a0b;
-            --card: #161618;
-            --border: #2d2d30;
-            --accent: #0070f3;
-            --text-main: #efeff1;
-            --text-dim: #a0a0a5;
-            --scan: #00ff41;
-            --alert: #ff4444;
+            --bg: #050505; --card: #111111; --border: #2a2a2a;
+            --accent: #0070f3; --text: #f0f0f0; --scan: #00ff41; --alert: #ff4444;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-            background: var(--bg); color: var(--text-main);
-            display: grid; grid-template-columns: 1fr 380px; height: 100vh; overflow: hidden;
+            font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text);
+            display: grid; grid-template-columns: 1fr 350px; height: 100vh; overflow: hidden;
         }
 
-        /* --- FLUX PRINCIPAL --- */
-        #feed { 
-            padding: 30px; overflow-y: auto; scroll-behavior: smooth;
-            background: radial-gradient(circle at top left, #111, var(--bg));
-        }
+        /* --- ZONE FLUX --- */
+        #feed { padding: 40px; overflow-y: auto; border-right: 1px solid var(--border); }
         
         .news-card {
-            background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-            padding: 24px; margin-bottom: 20px; cursor: pointer;
-            transition: transform 0.2s, border-color 0.2s; position: relative;
-            animation: fadeIn 0.5s ease;
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 20px; margin-bottom: 15px; cursor: pointer;
+            border-left: 4px solid #444; transition: all 0.2s; position: relative;
+            animation: slideIn 0.3s ease-out;
         }
-        .news-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+        .news-card:hover { border-color: var(--accent); background: #181818; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; } }
 
-        .news-card.is-fresh { border-left: 4px solid var(--alert); }
-        .is-fresh::after {
-            content: "NEW"; position: absolute; top: 10px; right: 10px;
-            background: var(--alert); color: white; font-size: 9px; font-weight: bold;
-            padding: 2px 6px; border-radius: 4px;
+        .news-card.is-fresh {
+            border-left-color: var(--alert);
+            background: linear-gradient(90deg, rgba(255,68,68,0.05) 0%, transparent 100%);
         }
 
-        .meta { display: flex; align-items: center; gap: 12px; font-size: 11px; margin-bottom: 12px; }
-        .source-tag { color: var(--accent); font-weight: 800; text-transform: uppercase; }
-        .timestamp { color: var(--text-dim); font-family: 'Courier New', monospace; }
+        .meta { display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-bottom: 8px; text-transform: uppercase; }
+        .source-tag { color: var(--accent); font-weight: bold; }
+        .timestamp { color: #888; font-family: monospace; }
         
-        .title { font-size: 1.25rem; font-weight: 600; margin-bottom: 12px; line-height: 1.3; color: #fff; }
-        .desc { font-size: 0.95rem; color: var(--text-dim); line-height: 1.5; }
+        .title { font-size: 1.2rem; margin: 0 0 10px 0; color: #fff; line-height: 1.4; }
+        .desc { font-size: 0.95rem; color: #aaa; line-height: 1.5; }
 
-        /* --- BARRE LATERALE --- */
-        aside { background: #000; border-left: 1px solid var(--border); display: flex; flex-direction: column; }
-        .panel { padding: 20px; border-bottom: 1px solid var(--border); }
+        /* --- SIDEBAR --- */
+        aside { padding: 20px; background: #000; display: flex; flex-direction: column; height: 100vh; }
         
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .stat-box { background: #111; padding: 15px; border-radius: 8px; border: 1px solid #222; }
-        .stat-val { font-size: 24px; font-weight: bold; color: var(--scan); }
-        .stat-lbl { font-size: 9px; color: var(--text-dim); text-transform: uppercase; }
-
-        .log-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 20px; }
-        #console-log { 
-            flex: 1; overflow-y: auto; font-family: 'Consolas', monospace; 
-            font-size: 10px; color: #666; padding-top: 10px;
+        .monitor-panel {
+            background: #0a0a0a; border: 1px solid var(--border); padding: 20px;
+            border-radius: 12px; margin-bottom: 15px;
         }
-        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #111; padding-bottom: 2px; }
-        .log-entry.err { color: var(--alert); }
-        .log-entry.ok { color: var(--scan); }
 
-        /* --- CONTROLES --- */
-        select, button {
-            width: 100%; background: #1a1a1c; border: 1px solid var(--border);
-            color: white; padding: 10px; border-radius: 6px; margin-top: 10px;
-            cursor: pointer; font-size: 13px;
+        .stat-val { font-size: 32px; font-weight: bold; color: var(--scan); }
+        .stat-label { font-size: 10px; color: #666; text-transform: uppercase; margin-bottom: 15px; }
+
+        .log-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        #console-log {
+            font-family: 'Consolas', monospace; font-size: 10px; color: #444;
+            flex: 1; overflow-y: auto; border-top: 1px solid #222; padding-top: 10px;
         }
-        button.primary { background: var(--accent); font-weight: bold; border: none; }
-        button.primary:hover { filter: brightness(1.2); }
+
+        .btn-main {
+            background: var(--accent); color: white; border: none;
+            padding: 12px; font-weight: bold; cursor: pointer; width: 100%;
+            border-radius: 4px; margin-bottom: 10px; text-transform: uppercase;
+        }
+        .btn-main:hover { filter: brightness(1.2); }
+
+        select {
+            width: 100%; background: #111; border: 1px solid #333; color: var(--scan);
+            padding: 8px; border-radius: 5px; margin-bottom: 10px;
+        }
+
+        .log-entry.success { color: var(--scan); }
+        .log-entry.info { color: var(--accent); }
 
         /* --- MODAL --- */
-        #modal {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
-            display: none; justify-content: center; align-items: center; z-index: 1000;
-        }
-        .modal-content { 
-            background: var(--card); width: 90%; max-width: 800px; 
-            padding: 40px; border-radius: 12px; border: 1px solid var(--border);
-        }
-
-        .scan-active { animation: pulse-border 1.5s infinite; }
-        @keyframes pulse-border { 0% { box-shadow: 0 0 0 0 rgba(0,255,65,0.2); } 70% { box-shadow: 0 0 0 10px rgba(0,255,65,0); } 100% { box-shadow: 0 0 0 0 rgba(0,255,65,0); } }
+        #modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; z-index: 99; justify-content: center; align-items: center; }
+        .modal-box { background: #111; border: 1px solid #333; width: 80%; max-width: 700px; padding: 40px; border-radius: 12px; }
     </style>
 </head>
 <body>
 
     <main id="feed">
-        <div id="init-screen" style="text-align:center; padding-top:20vh;">
-            <h1 style="font-size:3rem; margin-bottom:1rem;">SYSTEM READY</h1>
-            <p style="color:var(--text-dim);">Cliquez pour initialiser le scan multi-sources</p>
-            <button class="primary" style="width:200px; margin-top:20px;" onclick="App.start()">LANCER LE MONITORING</button>
+        <div id="start-msg" style="text-align:center; margin-top:20vh;">
+            <h1 style="color:var(--scan); font-size:3rem;">READY</h1>
+            <p style="color:#555;">Cliquez sur "Lancer le Scan" pour démarrer la veille.</p>
         </div>
     </main>
 
     <aside>
-        <div class="panel">
-            <h4 style="font-size:11px; letter-spacing:2px; color:var(--text-dim);">MONITORING RÉSEAU</h4>
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <div id="stat-count" class="stat-val">0</div>
-                    <div class="stat-lbl">Articles</div>
-                </div>
-                <div class="stat-box">
-                    <div id="stat-sources" class="stat-val">0</div>
-                    <div class="stat-lbl">Sources OK</div>
-                </div>
-            </div>
+        <div class="monitor-panel">
+            <div class="stat-label">Dépêches en Mémoire</div>
+            <div id="stats" class="stat-val">0</div>
             
-            <select id="freq" onchange="App.setFreq(this.value)">
-                <option value="30000">Rafraîchissement : 30s</option>
-                <option value="60000" selected>Rafraîchissement : 1m</option>
-                <option value="300000">Rafraîchissement : 5m</option>
-            </select>
-            <button class="primary" onclick="App.copyNews()">COPIER LA SYNTHÈSE</button>
+            <button class="btn-main" onclick="App.init()">Lancer le Scan</button>
+            <button class="btn-main" style="background:#ddd; color:#000;" onclick="App.copyAllNews()">Concatenation Totale</button>
+
+            <div style="margin-top:15px;">
+                <label style="font-size:10px; color:#555;">FRÉQUENCE</label>
+                <select id="scan-delay" onchange="App.updateFrequency(this.value)">
+                    <option value="30000">30 secondes</option>
+                    <option value="60000" selected>1 minute</option>
+                    <option value="300000">5 minutes</option>
+                </select>
+            </div>
         </div>
 
-        <div class="log-container">
-            <h4 style="font-size:11px; color:var(--text-dim);">TERMINAL DE FLUX</h4>
+        <div class="monitor-panel log-panel">
+            <div class="stat-label">Journal des flux</div>
             <div id="console-log"></div>
         </div>
     </aside>
 
-    <div id="modal" onclick="this.style.display='none'">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <div id="modal-body"></div>
-            <button onclick="document.getElementById('modal').style.display='none'">FERMER LA FENÊTRE</button>
+    <div id="modal-overlay" onclick="this.style.display='none'">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div id="modal-content"></div>
         </div>
     </div>
 
     <script>
-        {
-            const App = {
-                registry: new Set(),
-                data: [],
-                sources: [
-                    { name: "France 24", url: "https://www.france24.com/fr/actualites/rss" },
-                    { name: "Le Monde", url: "https://www.lemonde.fr/rss/une.xml" },
-                    { name: "Le Figaro", url: "https://www.lefigaro.fr/rss/figaro_actualites.xml" },
-                    { name: "BFMTV", url: "https://www.bfmtv.com/rss/info/flux-rss/flux-toutes-les-infos/" },
-                    { name: "Les Echos", url: "https://services.lesechos.fr/rss/les-echos-economie.xml" },
-                    { name: "Google News", url: "https://news.google.com/rss?hl=fr&gl=FR&ceid=FR:fr" }
-                ],
-                config: { interval: 60000, history: 12 },
-                timer: null,
+        const App = {
+            registry: new Set(),
+            currentData: [],
+            sources: [
+                { name: "FRANCE 24", url: "https://www.france24.com/fr/actualites/rss" },
+                { name: "LE MONDE", url: "https://www.lemonde.fr/rss/une.xml" },
+                { name: "LE FIGARO", url: "https://www.lefigaro.fr/rss/figaro_actualites.xml" },
+                { name: "BFMTV", url: "https://www.bfmtv.com/rss/info/flux-rss/flux-toutes-les-infos/" },
+                { name: "LES ECHOS", url: "https://services.lesechos.fr/rss/les-echos-economie.xml" },
+                { name: "GOOGLE NEWS FR", url: "https://news.google.com/rss?hl=fr&gl=FR&ceid=FR:fr" }
+            ],
+            interval: null,
 
-                log(msg, status = '') {
-                    const logEl = document.getElementById('console-log');
-                    const div = document.createElement('div');
-                    div.className = `log-entry ${status}`;
-                    div.textContent = `> [${new Date().toLocaleTimeString()}] ${msg}`;
-                    logEl.prepend(div);
-                },
+            log(msg, type = '') {
+                const logEl = document.getElementById('console-log');
+                const line = document.createElement('div');
+                line.className = `log-entry ${type}`;
+                line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+                logEl.prepend(line);
+            },
 
-                async scan() {
-                    this.log("Démarrage du scan global...", "ok");
-                    document.querySelector('.stats-grid').classList.add('scan-active');
-                    
-                    let activeSources = 0;
-                    const timestamp = new Date().getTime();
+            async init() {
+                document.getElementById('start-msg').style.display = 'none';
+                this.log("Initialisation du système...", "info");
+                await this.scan();
+                this.updateFrequency(document.getElementById('scan-delay').value);
+            },
 
-                    const fetchTasks = this.sources.map(async (src) => {
-                        try {
-                            // Utilisation d'un cache-buster pour forcer la mise à jour des éditorialistes
-                            const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(src.url)}&_=${timestamp}`;
-                            const res = await fetch(proxyUrl);
-                            const json = await res.json();
-                            
-                            if (json.status === 'ok') {
-                                activeSources++;
-                                return json.items.map(item => ({ ...item, source: src.name }));
-                            }
-                            throw new Error("Timeout ou format invalide");
-                        } catch (e) {
-                            this.log(`Échec : ${src.name}`, "err");
-                            return [];
-                        }
-                    });
+            updateFrequency(ms) {
+                if (this.interval) clearInterval(this.interval);
+                this.interval = setInterval(() => this.scan(), ms);
+                this.log(`Cycle réglé sur ${ms/1000}s`, "info");
+            },
 
-                    const results = await Promise.all(fetchTasks);
-                    const flatItems = results.flat().sort((a, b) => new Date(a.pubDate) - new Date(b.pubDate));
-                    
-                    flatItems.forEach(item => {
-                        const hash = btoa(unescape(encodeURIComponent(item.title))).substring(0, 24);
-                        if (!this.registry.has(hash)) {
-                            this.registry.add(hash);
-                            this.data.push(item);
-                            this.render(item);
-                        }
-                    });
+            async scan() {
+                this.log("Scan des API éditoriales en cours...");
+                const timestamp = Date.now();
+                
+                const promises = this.sources.map(async (src) => {
+                    try {
+                        // Utilisation du cache-buster pour forcer la mise à jour réelle des flux
+                        const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(src.url)}&_=${timestamp}`);
+                        const data = await res.json();
+                        return data.status === 'ok' ? data.items.map(i => ({ ...i, source: src.name })) : [];
+                    } catch (e) { return []; }
+                });
 
-                    document.getElementById('stat-count').textContent = this.registry.size;
-                    document.getElementById('stat-sources').textContent = `${activeSources}/${this.sources.length}`;
-                    document.querySelector('.stats-grid').classList.remove('scan-active');
-                    this.log(`Scan terminé. ${activeSources} sources actives.`);
-                },
+                const results = await Promise.all(promises);
+                const allItems = results.flat().sort((a, b) => new Date(a.pubDate) - new Date(b.pubDate));
 
-                render(item) {
-                    const feed = document.getElementById('feed');
-                    const time = new Date(item.pubDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    const div = document.createElement('div');
-                    div.className = 'news-card is-fresh';
-                    div.innerHTML = `
-                        <div class="meta">
-                            <span class="source-tag">${item.source}</span>
-                            <span class="timestamp">${time}</span>
-                        </div>
-                        <h3 class="title">${item.title}</h3>
-                        <p class="desc">${item.description.replace(/<[^>]*>?/gm, '').substring(0, 180)}...</p>
-                    `;
-                    div.onclick = () => {
-                        div.classList.remove('is-fresh');
-                        this.showModal(item);
-                    };
-                    feed.prepend(div);
-                },
+                let newCount = 0;
+                allItems.forEach(item => {
+                    const sid = btoa(unescape(encodeURIComponent(item.title))).substring(0, 32);
+                    if (!this.registry.has(sid)) {
+                        this.registry.add(sid);
+                        this.currentData.push(item);
+                        this.renderCard(item);
+                        newCount++;
+                    }
+                });
 
-                showModal(item) {
-                    const modal = document.getElementById('modal');
-                    document.getElementById('modal-body').innerHTML = `
-                        <h4 style="color:var(--accent)">${item.source}</h4>
-                        <h1 style="margin: 10px 0 20px 0;">${item.title}</h1>
-                        <p style="color:var(--text-dim); line-height:1.6; font-size:1.1rem;">
-                            ${item.content || item.description}
-                        </p>
-                        <a href="${item.link}" target="_blank" style="color:var(--accent); display:block; margin-top:20px;">Lire l'article original ↗</a>
-                    `;
-                    modal.style.display = 'flex';
-                },
+                document.getElementById('stats').textContent = this.registry.size;
+                if (newCount > 0) this.log(`${newCount} nouvelles dépêches.`, "success");
+            },
 
-                copyNews() {
-                    const text = this.data
-                        .slice(-20)
-                        .reverse()
-                        .map(i => `[${i.source}] ${i.title}`)
-                        .join('\n');
-                    navigator.clipboard.writeText(text);
-                    alert("Les 20 dernières dépêches ont été copiées.");
-                },
+            renderCard(item) {
+                const card = document.createElement('div');
+                card.className = 'news-card is-fresh';
+                const time = new Date(item.pubDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                card.innerHTML = `
+                    <div class="meta"><span class="source-tag">${item.source}</span><span class="timestamp">${time}</span></div>
+                    <h3 class="title">${item.title}</h3>
+                    <p class="desc">${item.description.replace(/<[^>]*>?/gm, '').substring(0, 150)}...</p>
+                `;
+                card.onclick = () => { card.classList.remove('is-fresh'); this.openModal(item); };
+                document.getElementById('feed').prepend(card);
+            },
 
-                setFreq(val) {
-                    this.config.interval = parseInt(val);
-                    this.startTimer();
-                    this.log(`Intervalle réglé sur ${val/1000}s`);
-                },
+            copyAllNews() {
+                if (this.currentData.length === 0) return this.log("Aucune donnée à copier", "err");
+                
+                // On trie l'intégralité des données collectées depuis le début
+                const sorted = [...this.currentData].sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+                
+                let report = `RAPPORT DE VEILLE INTÉGRAL (${new Date().toLocaleString()})\n`;
+                report += `TOTAL DÉPÊCHES : ${sorted.length}\n`;
+                report += `==========================================\n\n`;
 
-                startTimer() {
-                    if (this.timer) clearInterval(this.timer);
-                    this.timer = setInterval(() => this.scan(), this.config.interval);
-                },
+                sorted.forEach((item, idx) => {
+                    const cleanDesc = item.description.replace(/<[^>]*>?/gm, '').trim();
+                    report += `[${idx + 1}] SOURCE: ${item.source} | DATE: ${item.pubDate}\n`;
+                    report += `TITRE: ${item.title}\n`;
+                    report += `CONTENU: ${cleanDesc}\n`;
+                    report += `LIEN: ${item.link}\n`;
+                    report += `------------------------------------------\n`;
+                });
 
-                start() {
-                    document.getElementById('feed').innerHTML = '';
-                    this.scan();
-                    this.startTimer();
-                }
-            };
+                navigator.clipboard.writeText(report).then(() => {
+                    this.log("Concaténation intégrale copiée !", "success");
+                    alert(`Succès : ${sorted.length} dépêches copiées dans le presse-papier.`);
+                });
+            },
 
-            window.App = App;
-        }
+            openModal(item) {
+                document.getElementById('modal-content').innerHTML = `
+                    <h2 style="color:var(--accent)">${item.source}</h2>
+                    <h1 style="margin:15px 0;">${item.title}</h1>
+                    <div style="line-height:1.6; color:#ccc; font-size:1.1rem;">${item.content || item.description}</div>
+                `;
+                document.getElementById('modal-overlay').style.display = 'flex';
+            }
+        };
     </script>
 </body>
 </html>
