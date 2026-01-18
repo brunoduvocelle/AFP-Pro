@@ -2,231 +2,126 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>AFP PRO - Veille Intégrale & Scan Dynamique</title>
+    <title>AFP PRO - Scan Haute Disponibilité</title>
     <style>
         :root {
-            --bg: #050505; --card: #111111; --border: #2a2a2a;
-            --accent: #0070f3; --text: #f0f0f0; --scan: #00ff41; --alert: #ff4444;
+            --bg: #050505; --card: #111; --border: #222;
+            --accent: #0070f3; --text: #eee; --scan: #00ff41; --err: #ff4444;
         }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
-            font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text);
-            display: grid; grid-template-columns: 1fr 350px; height: 100vh; overflow: hidden;
+            font-family: system-ui, sans-serif; background: var(--bg); color: var(--text);
+            display: grid; grid-template-columns: 1fr 380px; height: 100vh; margin: 0;
         }
-
-        /* --- ZONE FLUX --- */
-        #feed { padding: 40px; overflow-y: auto; border-right: 1px solid var(--border); }
-        
-        .news-card {
-            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-            padding: 20px; margin-bottom: 15px; cursor: pointer;
-            border-left: 4px solid #444; transition: all 0.2s; position: relative;
-            animation: slideIn 0.3s ease-out;
-        }
-        .news-card:hover { border-color: var(--accent); background: #181818; }
-
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; } }
-
-        .news-card.is-fresh {
-            border-left-color: var(--alert);
-            background: linear-gradient(90deg, rgba(255,68,68,0.05) 0%, transparent 100%);
-        }
-
-        .meta { display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-bottom: 8px; text-transform: uppercase; }
-        .source-tag { color: var(--accent); font-weight: bold; }
-        .timestamp { color: #888; font-family: monospace; }
-        
-        .title { font-size: 1.2rem; margin: 0 0 10px 0; color: #fff; line-height: 1.4; }
-        .desc { font-size: 0.95rem; color: #aaa; line-height: 1.5; }
-
-        /* --- SIDEBAR --- */
-        aside { padding: 20px; background: #000; display: flex; flex-direction: column; height: 100vh; }
-        
-        .monitor-panel {
-            background: #0a0a0a; border: 1px solid var(--border); padding: 20px;
-            border-radius: 12px; margin-bottom: 15px;
-        }
-
-        .stat-val { font-size: 32px; font-weight: bold; color: var(--scan); }
-        .stat-label { font-size: 10px; color: #666; text-transform: uppercase; margin-bottom: 15px; }
-
-        .log-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        #console-log {
-            font-family: 'Consolas', monospace; font-size: 10px; color: #444;
-            flex: 1; overflow-y: auto; border-top: 1px solid #222; padding-top: 10px;
-        }
-
-        .btn-main {
-            background: var(--accent); color: white; border: none;
-            padding: 12px; font-weight: bold; cursor: pointer; width: 100%;
-            border-radius: 4px; margin-bottom: 10px; text-transform: uppercase;
-        }
-        .btn-main:hover { filter: brightness(1.2); }
-
-        select {
-            width: 100%; background: #111; border: 1px solid #333; color: var(--scan);
-            padding: 8px; border-radius: 5px; margin-bottom: 10px;
-        }
-
-        .log-entry.success { color: var(--scan); }
-        .log-entry.info { color: var(--accent); }
-
-        /* --- MODAL --- */
-        #modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; z-index: 99; justify-content: center; align-items: center; }
-        .modal-box { background: #111; border: 1px solid #333; width: 80%; max-width: 700px; padding: 40px; border-radius: 12px; }
+        #feed { padding: 30px; overflow-y: auto; border-right: 1px solid var(--border); }
+        aside { background: #000; display: flex; flex-direction: column; padding: 20px; }
+        .monitor { background: #0a0a0a; border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+        .log-area { flex: 1; overflow-y: auto; font-family: monospace; font-size: 11px; color: #555; border-top: 1px solid var(--border); padding-top: 10px; }
+        .log-entry.fail { color: var(--err); }
+        .log-entry.ok { color: var(--scan); }
+        .news-card { background: var(--card); border: 1px solid var(--border); padding: 15px; margin-bottom: 10px; border-radius: 8px; animation: slide 0.3s ease; }
+        @keyframes slide { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
+        button { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
+        .source-tag { font-size: 10px; color: var(--accent); font-weight: bold; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
     <main id="feed">
-        <div id="start-msg" style="text-align:center; margin-top:20vh;">
-            <h1 style="color:var(--scan); font-size:3rem;">READY</h1>
-            <p style="color:#555;">Cliquez sur "Lancer le Scan" pour démarrer la veille.</p>
+        <div style="text-align:center; padding-top:100px; color:#444;">
+            <h2>Système de Veille Multilflux</h2>
+            <p>Cliquez sur "Lancer" pour contourner les blocages CORS.</p>
         </div>
     </main>
 
     <aside>
-        <div class="monitor-panel">
-            <div class="stat-label">Dépêches en Mémoire</div>
-            <div id="stats" class="stat-val">0</div>
-            
-            <button class="btn-main" onclick="App.init()">Lancer le Scan</button>
-            <button class="btn-main" style="background:#ddd; color:#000;" onclick="App.copyAllNews()">Concatenation Totale</button>
-
-            <div style="margin-top:15px;">
-                <label style="font-size:10px; color:#555;">FRÉQUENCE</label>
-                <select id="scan-delay" onchange="App.updateFrequency(this.value)">
-                    <option value="30000">30 secondes</option>
-                    <option value="60000" selected>1 minute</option>
-                    <option value="300000">5 minutes</option>
-                </select>
-            </div>
+        <div class="monitor">
+            <div style="font-size:10px; color:#666; margin-bottom:5px;">MÉMOIRE ACTIVE</div>
+            <div id="count" style="font-size:32px; font-weight:bold; color:var(--scan);">0</div>
+            <button onclick="App.run()">Lancer le Monitoring</button>
+            <button style="background:#333;" onclick="App.copyAll()">Concatenation Totale</button>
         </div>
-
-        <div class="monitor-panel log-panel">
-            <div class="stat-label">Journal des flux</div>
-            <div id="console-log"></div>
-        </div>
+        <div class="log-area" id="logs"></div>
     </aside>
-
-    <div id="modal-overlay" onclick="this.style.display='none'">
-        <div class="modal-box" onclick="event.stopPropagation()">
-            <div id="modal-content"></div>
-        </div>
-    </div>
 
     <script>
         const App = {
-            registry: new Set(),
-            currentData: [],
+            data: [],
+            seen: new Set(),
             sources: [
-                { name: "FRANCE 24", url: "https://www.france24.com/fr/actualites/rss" },
-                { name: "LE MONDE", url: "https://www.lemonde.fr/rss/une.xml" },
-                { name: "LE FIGARO", url: "https://www.lefigaro.fr/rss/figaro_actualites.xml" },
-                { name: "BFMTV", url: "https://www.bfmtv.com/rss/info/flux-rss/flux-toutes-les-infos/" },
-                { name: "LES ECHOS", url: "https://services.lesechos.fr/rss/les-echos-economie.xml" },
-                { name: "GOOGLE NEWS FR", url: "https://news.google.com/rss?hl=fr&gl=FR&ceid=FR:fr" }
+                { n: "Le Monde", u: "https://www.lemonde.fr/rss/une.xml" },
+                { n: "Le Figaro", u: "https://www.lefigaro.fr/rss/figaro_actualites.xml" },
+                { n: "Les Echos", u: "https://services.lesechos.fr/rss/les-echos-economie.xml" },
+                { n: "BFMTV", u: "https://www.bfmtv.com/rss/info/flux-rss/flux-toutes-les-infos/" },
+                { n: "France 24", u: "https://www.france24.com/fr/actualites/rss" }
             ],
-            interval: null,
 
-            log(msg, type = '') {
-                const logEl = document.getElementById('console-log');
-                const line = document.createElement('div');
-                line.className = `log-entry ${type}`;
-                line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-                logEl.prepend(line);
+            log(m, cl = '') {
+                const e = document.getElementById('logs');
+                const d = document.createElement('div');
+                d.className = `log-entry ${cl}`;
+                d.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
+                e.prepend(d);
             },
 
-            async init() {
-                document.getElementById('start-msg').style.display = 'none';
-                this.log("Initialisation du système...", "info");
-                await this.scan();
-                this.updateFrequency(document.getElementById('scan-delay').value);
+            async fetchWithFallback(url) {
+                // Tentative 1: rss2json
+                try {
+                    const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&api_key=00000000000000000000000000000000`);
+                    const j = await r.json();
+                    if (j.status === 'ok') return j.items;
+                } catch(e) {}
+
+                // Tentative 2: Proxy AllOrigins (Contournement CORS)
+                try {
+                    const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+                    const j = await r.json();
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(j.contents, "text/xml");
+                    const items = Array.from(xml.querySelectorAll("item")).map(i => ({
+                        title: i.querySelector("title")?.textContent,
+                        description: i.querySelector("description")?.textContent,
+                        pubDate: i.querySelector("pubDate")?.textContent,
+                        link: i.querySelector("link")?.textContent
+                    }));
+                    return items;
+                } catch(e) { return null; }
             },
 
-            updateFrequency(ms) {
-                if (this.interval) clearInterval(this.interval);
-                this.interval = setInterval(() => this.scan(), ms);
-                this.log(`Cycle réglé sur ${ms/1000}s`, "info");
-            },
-
-            async scan() {
-                this.log("Scan des API éditoriales en cours...");
-                const timestamp = Date.now();
+            async run() {
+                document.getElementById('feed').innerHTML = '';
+                this.log("Initialisation du scan résilient...");
                 
-                const promises = this.sources.map(async (src) => {
-                    try {
-                        // Utilisation du cache-buster pour forcer la mise à jour réelle des flux
-                        const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(src.url)}&_=${timestamp}`);
-                        const data = await res.json();
-                        return data.status === 'ok' ? data.items.map(i => ({ ...i, source: src.name })) : [];
-                    } catch (e) { return []; }
-                });
-
-                const results = await Promise.all(promises);
-                const allItems = results.flat().sort((a, b) => new Date(a.pubDate) - new Date(b.pubDate));
-
-                let newCount = 0;
-                allItems.forEach(item => {
-                    const sid = btoa(unescape(encodeURIComponent(item.title))).substring(0, 32);
-                    if (!this.registry.has(sid)) {
-                        this.registry.add(sid);
-                        this.currentData.push(item);
-                        this.renderCard(item);
-                        newCount++;
+                for (const src of this.sources) {
+                    const items = await this.fetchWithFallback(src.u);
+                    if (items) {
+                        this.log(`Succès : ${src.n}`, 'ok');
+                        items.forEach(item => {
+                            const id = btoa(unescape(encodeURIComponent(item.title))).substring(0, 20);
+                            if (!this.seen.has(id)) {
+                                this.seen.add(id);
+                                item.source = src.n;
+                                this.data.push(item);
+                                this.render(item);
+                            }
+                        });
+                    } else {
+                        this.log(`Échec Critique : ${src.n}`, 'fail');
                     }
-                });
-
-                document.getElementById('stats').textContent = this.registry.size;
-                if (newCount > 0) this.log(`${newCount} nouvelles dépêches.`, "success");
+                }
+                document.getElementById('count').textContent = this.seen.size;
             },
 
-            renderCard(item) {
-                const card = document.createElement('div');
-                card.className = 'news-card is-fresh';
-                const time = new Date(item.pubDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                card.innerHTML = `
-                    <div class="meta"><span class="source-tag">${item.source}</span><span class="timestamp">${time}</span></div>
-                    <h3 class="title">${item.title}</h3>
-                    <p class="desc">${item.description.replace(/<[^>]*>?/gm, '').substring(0, 150)}...</p>
-                `;
-                card.onclick = () => { card.classList.remove('is-fresh'); this.openModal(item); };
-                document.getElementById('feed').prepend(card);
+            render(i) {
+                const c = document.createElement('div');
+                c.className = 'news-card';
+                c.innerHTML = `<div class="source-tag">${i.source}</div><div style="font-weight:bold;margin:5px 0;">${i.title}</div><div style="font-size:12px;color:#888;">${(i.description||"").replace(/<[^>]*>?/gm, '').substring(0,120)}...</div>`;
+                document.getElementById('feed').prepend(c);
             },
 
-            copyAllNews() {
-                if (this.currentData.length === 0) return this.log("Aucune donnée à copier", "err");
-                
-                // On trie l'intégralité des données collectées depuis le début
-                const sorted = [...this.currentData].sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-                
-                let report = `RAPPORT DE VEILLE INTÉGRAL (${new Date().toLocaleString()})\n`;
-                report += `TOTAL DÉPÊCHES : ${sorted.length}\n`;
-                report += `==========================================\n\n`;
-
-                sorted.forEach((item, idx) => {
-                    const cleanDesc = item.description.replace(/<[^>]*>?/gm, '').trim();
-                    report += `[${idx + 1}] SOURCE: ${item.source} | DATE: ${item.pubDate}\n`;
-                    report += `TITRE: ${item.title}\n`;
-                    report += `CONTENU: ${cleanDesc}\n`;
-                    report += `LIEN: ${item.link}\n`;
-                    report += `------------------------------------------\n`;
-                });
-
-                navigator.clipboard.writeText(report).then(() => {
-                    this.log("Concaténation intégrale copiée !", "success");
-                    alert(`Succès : ${sorted.length} dépêches copiées dans le presse-papier.`);
-                });
-            },
-
-            openModal(item) {
-                document.getElementById('modal-content').innerHTML = `
-                    <h2 style="color:var(--accent)">${item.source}</h2>
-                    <h1 style="margin:15px 0;">${item.title}</h1>
-                    <div style="line-height:1.6; color:#ccc; font-size:1.1rem;">${item.content || item.description}</div>
-                `;
-                document.getElementById('modal-overlay').style.display = 'flex';
+            copyAll() {
+                const txt = this.data.map(i => `[${i.source}] ${i.title}\n${i.link}`).join('\n\n');
+                navigator.clipboard.writeText(txt);
+                alert("Tout est copié (" + this.data.length + " dépêches)");
             }
         };
     </script>
