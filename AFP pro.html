@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>AFP PRO - Veille Adaptative & Flash Info</title>
+    <style>
+        :root {
+            --bg: #030303; --card: #121212; --border: #333;
+            --accent: #0070f3; --text: #e0e0e0; --scan: #00ff41; --alert: #ff4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text);
+            display: grid; grid-template-columns: 1fr 350px; height: 100vh; overflow: hidden;
+        }
+
+        /* --- ZONE FLUX --- */
+        #feed { padding: 40px; overflow-y: auto; border-right: 1px solid var(--border); }
+        
+        .news-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 20px; margin-bottom: 15px; cursor: pointer;
+            border-left: 4px solid #444; transition: all 0.2s; position: relative;
+            animation: slideIn 0.4s ease-out; display: flex; flex-direction: column;
+        }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
+
+        .news-card.is-fresh {
+            border-left-color: var(--alert);
+            background: linear-gradient(90deg, rgba(255,68,68,0.05) 0%, transparent 100%);
+        }
+        .news-card.is-fresh .title { color: #ffcccc; }
+
+        .status-footer { 
+            margin-top: 12px; display: none; 
+            font-size: 10px; font-weight: bold; color: var(--alert);
+            letter-spacing: 1px;
+        }
+        .is-fresh .status-footer { display: block; animation: blink 2s infinite; }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .meta { display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .source-tag { color: var(--accent); font-weight: bold; }
+        .timestamp { color: #888; font-family: monospace; }
+        
+        .title { font-size: 1.3rem; margin: 0 0 10px 0; color: #ddd; line-height: 1.4; }
+        .desc { font-size: 0.95rem; color: #888; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* --- SIDEBAR & CONTROLS --- */
+        aside { padding: 25px; background: #000; display: flex; flex-direction: column; position: relative; height: 100vh; }
+        
+        .monitor-panel {
+            background: #080808; border: 1px solid var(--border); padding: 20px;
+            border-radius: 12px; margin-bottom: 20px; position: relative;
+        }
+
+        /* Modification spécifique pour le panneau de logs */
+        .log-panel {
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; /* Empêche le panneau entier de grandir */
+        }
+
+        .log-header {
+            margin-bottom: 15px;
+        }
+
+        #console-log {
+            font-family: 'Consolas', monospace; font-size: 11px; color: #555;
+            flex: 1; 
+            overflow-y: auto; /* Seul le contenu des logs défile */
+            border-top: 1px solid #222; 
+            padding-top: 10px;
+        }
+
+        .scan-indicator {
+            position: absolute; top: 15px; right: 15px; width: 40px; height: 40px;
+            border: 2px solid #222; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        }
+        .scan-indicator.active { border-color: var(--scan); }
+        .scan-indicator.active::before {
+            content: ""; width: 12px; height: 12px; background: var(--scan); border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
+
+        .status-led {
+            width: 10px; height: 10px; background: #333; border-radius: 50%;
+            display: inline-block; margin-right: 10px;
+        }
+        .status-led.active { background: var(--scan); box-shadow: 0 0 10px var(--scan); }
+
+        .control-group { margin-top: 15px; padding-top: 15px; border-top: 1px solid #222; }
+        .control-label { display: block; font-size: 10px; color: #666; margin-bottom: 8px; font-weight: bold; }
+        
+        select {
+            width: 100%; background: #111; border: 1px solid #333; color: var(--scan);
+            padding: 8px; border-radius: 5px; font-family: monospace; font-weight: bold; cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-container {
+            display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text);
+            cursor: pointer; padding: 5px 0;
+        }
+        .checkbox-container input { cursor: pointer; }
+
+        .log-entry { margin-bottom: 4px; }
+        .log-success { color: #00ff41; }
+        .log-info { color: #0070f3; }
+
+        .btn-concat {
+            background: #d1d1d1; color: #000; border: none;
+            padding: 12px 20px; font-size: 13px; font-weight: bold;
+            cursor: pointer; width: 100%; border-radius: 4px;
+            margin-bottom: 10px; transition: background 0.2s;
+            text-transform: uppercase;
+        }
+        .btn-concat:hover { background: #fff; }
+
+        /* --- MODAL --- */
+        #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; z-index: 999; justify-content: center; align-items: center; }
+        .modal-box { background: #111; border: 1px solid #333; width: 80%; max-width: 700px; padding: 40px; border-radius: 15px; }
+    </style>
+</head>
+<body>
+
+    <main id="feed">
+        <div id="start-msg" style="text-align:center; margin-top:100px; color:#555;">
+            <h2>Initialisation du système PRO...</h2>
+            <p>Cliquez n'importe où pour démarrer la connexion aux flux.</p>
+        </div>
+    </main>
+
+    <aside>
+        <div class="monitor-panel">
+            <div id="scan-pulse" class="scan-indicator"></div>
+            <h4 style="font-size:11px; color:#888; margin-bottom:15px; letter-spacing:1px;">ÉTAT DU SYSTÈME</h4>
+            <div style="display:flex; align-items:center; margin-bottom:10px;">
+                <span id="led" class="status-led"></span>
+                <span id="status-txt" style="font-size:13px; font-weight:bold;">STANDBY</span>
+            </div>
+            <div id="stats" style="font-size:32px; font-weight:bold; color:var(--text);">0</div>
+            <div style="font-size:10px; color:#666;">Dépêches chargées</div>
+
+            <div class="control-group">
+                <label class="control-label">LECTURE AUDIO AUTOMATIQUE</label>
+                <label class="checkbox-container">
+                    <input type="checkbox" id="audio-toggle" checked> Activer la synthèse vocale
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">DÉLAI DE RAFRAÎCHISSEMENT (S)</label>
+                <select id="scan-delay" onchange="App.updateFrequency(this.value)">
+                    <option value="15000">15 secondes</option>
+                    <option value="30000">30 secondes</option>
+                    <option value="45000" selected>45 secondes</option>
+                    <option value="60000">60 secondes</option>
+                    <option value="300000">5 minutes</option>
+                </select>
+
+                <label class="control-label">FENÊTRE D'OBSERVATION (H)</label>
+                <select id="history-hours" onchange="App.updateHistory(this.value)">
+                    <option value="1">1 heure</option>
+                    <option value="3">3 heures</option>
+                    <option value="6" selected>6 heures</option>
+                    <option value="12">12 heures</option>
+                    <option value="24">24 heures</option>
+                    <option value="48">48 heures</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="monitor-panel log-panel">
+            <div class="log-header">
+                <h4 style="font-size:11px; color:#888; margin-bottom:10px; letter-spacing:1px;">JOURNAL DES FLUX (LOGS)</h4>
+                <button class="btn-concat" onclick="App.copyAllNews()">Concatenation des infos</button>
+            </div>
+            <div id="console-log"></div>
+        </div>
+    </aside>
+
+    <div id="modal-overlay" onclick="closeModal()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div id="modal-content"></div>
+            <button onclick="closeModal()" style="margin-top:20px; padding:10px 20px; background:var(--accent); border:none; color:white; cursor:pointer; border-radius:5px;">Fermer</button>
+        </div>
+    </div>
+
+    <script>
+        const App = {
+            HISTORY_HOURS: 6, 
+            registry: new Set(),
+            currentData: [], 
+            synth: window.speechSynthesis,
+            isFirstRun: true,
+            currentInterval: null,
+            sources: [
+                { name: "FRANCE 24", url: "https://www.france24.com/fr/actualites/rss" },
+                { name: "LE MONDE", url: "https://www.lemonde.fr/rss/une.xml" },
+                { name: "LE FIGARO", url: "https://www.lefigaro.fr/rss/figaro_actualites.xml" },
+                { name: "BFMTV", url: "https://www.bfmtv.com/rss/info/flux-rss/flux-toutes-les-infos/" },
+                { name: "LES ECHOS", url: "https://services.lesechos.fr/rss/les-echos-economie.xml" },
+                { name: "GOOGLE NEWS FR", url: "https://news.google.com/rss?hl=fr&gl=FR&ceid=FR:fr" }
+            ],
+
+            log(msg, type = 'normal') {
+                const consoleEl = document.getElementById('console-log');
+                const line = document.createElement('div');
+                line.className = 'log-entry';
+                const time = new Date().toLocaleTimeString().split(' ')[0];
+                if (type === 'success') line.classList.add('log-success');
+                if (type === 'info') line.classList.add('log-info');
+                line.textContent = `[${time}] ${msg}`;
+                consoleEl.prepend(line);
+            },
+
+            updateFrequency(ms) {
+                if (this.currentInterval) clearInterval(this.currentInterval);
+                this.log(`Fréquence : ${ms/1000}s`, 'info');
+                this.currentInterval = setInterval(() => this.scan(), ms);
+            },
+
+            updateHistory(hours) {
+                this.HISTORY_HOURS = parseInt(hours);
+                this.log(`Filtre : ${hours}h. Nettoyage et rafraîchissement...`, 'info');
+                document.getElementById('feed').innerHTML = '';
+                this.registry.clear();
+                this.currentData = [];
+                this.isFirstRun = true; 
+                this.scan();
+            },
+
+            async init() {
+                document.getElementById('start-msg').style.display = 'none';
+                this.log("Initialisation...", 'info');
+                this.scan();
+                this.updateFrequency(45000); 
+            },
+
+            async scan() {
+                const led = document.getElementById('led');
+                const status = document.getElementById('status-txt');
+                const pulse = document.getElementById('scan-pulse');
+                led.classList.add('active');
+                pulse.classList.add('active');
+                status.textContent = "SCAN EN COURS...";
+
+                const promises = this.sources.map(async (src) => {
+                    try {
+                        const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(src.url)}`);
+                        const data = await res.json();
+                        return data.status === 'ok' ? data.items.map(item => ({ ...item, source: src.name })) : [];
+                    } catch (e) { return []; }
+                });
+
+                const results = await Promise.all(promises);
+                const allItems = results.flat().sort((a, b) => new Date(a.pubDate) - new Date(b.pubDate));
+                
+                const now = new Date();
+                let validItems = allItems.filter(item => (now - new Date(item.pubDate)) < this.HISTORY_HOURS * 60 * 60 * 1000);
+
+                validItems.forEach(item => {
+                    const sid = btoa(unescape(encodeURIComponent(item.title))).substring(0, 32);
+                    if (!this.registry.has(sid)) {
+                        this.registry.add(sid);
+                        this.currentData.push(item); 
+                        this.renderCard(item);
+                        const audioEnabled = document.getElementById('audio-toggle').checked;
+                        if (!this.isFirstRun && audioEnabled) this.speak(item.title);
+                    }
+                });
+
+                this.isFirstRun = false;
+                setTimeout(() => {
+                    led.classList.remove('active');
+                    pulse.classList.remove('active');
+                    status.textContent = "VEILLE ACTIVE";
+                }, 1500);
+                document.getElementById('stats').textContent = this.registry.size;
+            },
+
+            renderCard(item) {
+                const card = document.createElement('div');
+                card.className = 'news-card is-fresh';
+                const timeStr = new Date(item.pubDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                card.innerHTML = `
+                    <div class="meta">
+                        <span class="source-tag">${item.source}</span>
+                        <span class="timestamp">${timeStr}</span>
+                    </div>
+                    <h3 class="title">${item.title}</h3>
+                    <p class="desc">${(item.description || "").replace(/<[^>]*>?/gm, '')}</p>
+                    <div class="status-footer">• À LIRE</div>
+                `;
+                card.onclick = () => { card.classList.remove('is-fresh'); this.openModal(item); };
+                document.getElementById('feed').prepend(card);
+            },
+
+            copyAllNews() {
+                if (this.currentData.length === 0) {
+                    this.log("Rien à copier", "error");
+                    return;
+                }
+                const sortedCopy = [...this.currentData].sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+                let textToCopy = `SYNTHÈSE FLASH INFO (${this.HISTORY_HOURS}h) :\n\n`;
+                sortedCopy.forEach((item, index) => {
+                    const timeStr = new Date(item.pubDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const cleanDesc = (item.description || "").replace(/<[^>]*>?/gm, '').trim();
+                    textToCopy += `--- INFO ${index + 1} [${timeStr}] ---\nSOURCE : ${item.source}\nTITRE : ${item.title}\nRÉSUMÉ : ${cleanDesc}\n\n`;
+                });
+
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    this.log("Copié !", "success");
+                    const btn = document.querySelector('.btn-concat');
+                    btn.textContent = "Copié ✓";
+                    setTimeout(() => btn.textContent = "Concatenation des infos", 2000);
+                });
+            },
+
+            openModal(item) {
+                this.synth.cancel();
+                document.getElementById('modal-content').innerHTML = `
+                    <h2 style="color:var(--accent);">${item.source}</h2><h1>${item.title}</h1>
+                    <p style="line-height:1.6; font-size:1.1rem; color:#ccc;">${(item.content || item.description || "").replace(/<[^>]*>?/gm, '')}</p>
+                `;
+                document.getElementById('modal-overlay').style.display = 'flex';
+            },
+
+            speak(text) {
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = 'fr-FR';
+                this.synth.speak(u);
+            }
+        };
+
+        window.closeModal = () => document.getElementById('modal-overlay').style.display = 'none';
+        document.body.addEventListener('click', () => {
+            if (App.isFirstRun && document.getElementById('start-msg').style.display !== 'none') App.init();
+        });
+    </script>
+</body>
+</html>
