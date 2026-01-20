@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>AFP PRO - Veille Maîtrisée (V2.3)</title>
+    <title>AFP PRO - Veille Maîtrisée (V2.6)</title>
     <style>
         :root {
             --bg: #050505; --panel: #111; --border: #2a2a2a;
@@ -71,8 +71,6 @@
             color: #555; border-top: 1px solid var(--border); padding-top: 10px; 
         }
         .log-entry { margin-bottom: 3px; border-bottom: 1px solid #111; padding-bottom: 2px; }
-        .log-entry.red { color: var(--fail); }
-        .log-entry.green { color: var(--success); }
 
         button {
             width: 100%; padding: 10px; background: var(--accent); color: white;
@@ -81,17 +79,14 @@
         }
         button.secondary { background: #222; color: #ccc; margin-top: 5px; }
 
-        /* MODAL */
         #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 999; }
         .modal-content { width: 85%; max-width: 650px; background: #111; border: 1px solid #333; padding: 30px; border-radius: 10px; position: relative; }
         
         .btn-back {
-            display: inline-flex; align-items: center; gap: 8px;
             background: #222; color: #fff; border: 1px solid #444;
             padding: 8px 15px; border-radius: 5px; cursor: pointer;
-            font-size: 12px; margin-bottom: 20px; transition: 0.2s;
+            font-size: 12px; margin-bottom: 20px;
         }
-        .btn-back:hover { background: var(--accent); border-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -99,7 +94,7 @@
     <main id="feed">
         <div style="text-align:center; padding-top:150px; color:#444;">
             <h2>SYSTÈME PRÊT</h2>
-            <p>Chargement des flux en cours...</p>
+            <p>Chargement automatique des dépêches en cours...</p>
         </div>
     </main>
 
@@ -157,33 +152,41 @@
                 { id: 'lemonde', name: "Le Monde", url: "https://www.lemonde.fr/rss/une.xml" },
                 { id: 'lefigaro', name: "Le Figaro", url: "https://www.lefigaro.fr/rss/figaro_actualites.xml" },
                 { id: 'bfm', name: "BFMTV", url: "https://www.bfmtv.com/rss/news-24-7/" },
-                // LES ECHOS : Flux "Industrie" plus permissif techniquement
-                { id: 'lesechos', name: "Les Echos", url: "https://www.lesechos.fr/rss/rss_industrie.xml" },
+                { id: 'capital', name: "Capital Eco", url: "https://www.capital.fr/economie-politique/rss" },
                 { id: 'f24', name: "France 24", url: "https://www.france24.com/fr/actualites/rss" },
                 { id: 'google', name: "Google News", url: "https://news.google.com/rss?hl=fr&gl=FR&ceid=FR:fr" }
             ],
 
             init() {
+                // 1. Initialiser l'interface des sources
                 document.getElementById('source-status').innerHTML = this.sources.map(s => `
                     <div class="source-item"><span>${s.name}</span><span id="dot-${s.id}" class="dot"></span></div>
                 `).join('');
+                
+                // 2. Charger les réglages (lance aussi le timer)
                 this.updateSettings();
+                
+                // 3. LANCEMENT IMMÉDIAT DU SCAN (Correction)
                 this.manualScan();
+                this.log("Initialisation terminée : Scan automatique lancé.", "info");
             },
 
             updateSettings() {
                 this.config.freq = parseInt(document.getElementById('freq-select').value);
                 this.config.historyHours = parseInt(document.getElementById('hist-select').value);
+                
                 if (this.timer) clearInterval(this.timer);
                 this.timer = setInterval(() => this.manualScan(), this.config.freq);
-                this.log(`Config: ${this.config.freq/1000}s | ${this.config.historyHours}h`, 'info');
+                
+                this.log(`Paramètres : ${this.config.freq/1000}s | Hist : ${this.config.historyHours}h`, 'info');
+                this.rebuildFeed(); 
             },
 
             log(msg, type = '') {
                 const el = document.getElementById('logs');
                 const div = document.createElement('div');
                 div.className = `log-entry ${type}`;
-                div.textContent = `[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`;
+                div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
                 el.prepend(div);
             },
 
@@ -193,84 +196,79 @@
             },
 
             async manualScan() {
-                this.log("Cycle de scan démarré...", "info");
+                this.log("Cycle de scan actif...", "info");
                 this.sources.forEach(src => this.fetchSource(src));
             },
 
             async fetchSource(src) {
-                let items = [];
-                let success = false;
-
-                // STRATÉGIE 1 : RSS2JSON (Performant sur BFMTV / Le Monde)
                 try {
-                    const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(src.url)}&t=${Date.now()}`);
-                    const json = await res.json();
-                    if (json.status === 'ok' && json.items.length > 0) {
-                        items = json.items.map(i => ({ t: i.title, d: i.description, l: i.link, date: i.pubDate, s: src.name }));
-                        success = true;
+                    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(src.url)}&t=${Date.now()}`);
+                    const data = await res.json();
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(data.contents, "text/xml");
+                    const nodes = Array.from(xml.querySelectorAll("item"));
+                    
+                    if (nodes.length > 0) {
+                        const items = nodes.map(i => ({
+                            t: i.querySelector("title")?.textContent,
+                            d: i.querySelector("description")?.textContent,
+                            l: i.querySelector("link")?.textContent,
+                            date: i.querySelector("pubDate")?.textContent,
+                            s: src.name
+                        }));
+                        this.updateDot(src.id, 'ok');
+                        this.processItems(items);
                     }
-                } catch (e) {}
-
-                // STRATÉGIE 2 : ALLORIGINS (Indispensable pour Le Figaro et Les Echos)
-                if (!success) {
-                    try {
-                        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(src.url)}&t=${Date.now()}`);
-                        const data = await res.json();
-                        const parser = new DOMParser();
-                        const xml = parser.parseFromString(data.contents, "text/xml");
-                        const nodes = Array.from(xml.querySelectorAll("item"));
-                        
-                        if (nodes.length > 0) {
-                            items = nodes.map(i => ({
-                                t: i.querySelector("title")?.textContent,
-                                d: i.querySelector("description")?.textContent,
-                                l: i.querySelector("link")?.textContent,
-                                date: i.querySelector("pubDate")?.textContent,
-                                s: src.name
-                            }));
-                            success = true;
-                        }
-                    } catch (e) {}
-                }
-
-                if (success) {
-                    this.updateDot(src.id, 'ok');
-                    this.processItems(items);
-                } else {
+                } catch (e) {
                     this.updateDot(src.id, 'err');
-                    this.log(`Échec: ${src.name}`, 'red');
+                    this.log(`Erreur flux : ${src.name}`, 'red');
                 }
             },
 
             processItems(items) {
-                const cutoff = Date.now() - (this.config.historyHours * 3600000);
+                let added = false;
                 items.forEach(item => {
                     const itemDate = new Date(item.date).getTime();
-                    if (isNaN(itemDate) || itemDate < cutoff) return;
+                    if (isNaN(itemDate)) return;
                     
+                    // Clé unique basée sur titre + source
                     const id = btoa(unescape(encodeURIComponent(item.t + item.s))).substring(0, 32);
                     if (!this.registry.has(id)) {
                         this.registry.add(id);
                         this.data.push({ ...item, timestamp: itemDate });
-                        this.renderCard(item);
+                        added = true;
                     }
                 });
-                document.getElementById('total-count').textContent = this.registry.size;
+
+                if (added) this.rebuildFeed();
             },
 
-            renderCard(item) {
-                const card = document.createElement('div');
-                card.className = 'news-card fresh';
-                const timeStr = new Date(item.date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                card.innerHTML = `
-                    <div class="meta"><span class="source-badge">${item.s}</span><span class="time-badge">${timeStr}</span></div>
-                    <h3 class="title">${item.t}</h3>
-                    <p class="desc">${(item.d || "").replace(/<[^>]*>?/gm, '').substring(0, 150)}...</p>
-                `;
-                card.onclick = () => this.openModal(item);
+            rebuildFeed() {
                 const feed = document.getElementById('feed');
-                if (this.registry.size === 1) feed.innerHTML = '';
-                feed.prepend(card);
+                const cutoff = Date.now() - (this.config.historyHours * 3600000);
+                
+                const filteredData = this.data
+                    .filter(item => item.timestamp >= cutoff)
+                    .sort((a, b) => b.timestamp - a.timestamp);
+
+                if (filteredData.length > 0) feed.innerHTML = '';
+                
+                filteredData.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'news-card';
+                    const d = new Date(item.timestamp);
+                    const timeStr = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')} - ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+
+                    card.innerHTML = `
+                        <div class="meta"><span class="source-badge">${item.s}</span><span class="time-badge">${timeStr}</span></div>
+                        <h3 class="title">${item.t}</h3>
+                        <p class="desc">${(item.d || "").replace(/<[^>]*>?/gm, '').substring(0, 160)}...</p>
+                    `;
+                    card.onclick = () => this.openModal(item);
+                    feed.appendChild(card);
+                });
+                
+                document.getElementById('total-count').textContent = filteredData.length;
             },
 
             openModal(item) {
@@ -278,7 +276,7 @@
                     <h3 style="color:var(--accent)">${item.s}</h3>
                     <h1 style="margin:10px 0 20px 0">${item.t}</h1>
                     <div style="line-height:1.6; color:#ccc">${item.d}</div>
-                    <br><a href="${item.l}" target="_blank" style="color:var(--accent)">Lire l'article original ↗</a>
+                    <br><a href="${item.l}" target="_blank" style="color:var(--accent)">Accéder à l'article complet ↗</a>
                 `;
                 document.getElementById('modal').style.display = 'flex';
             },
@@ -286,12 +284,18 @@
             closeModal() { document.getElementById('modal').style.display = 'none'; },
 
             copyNews() {
-                const txt = this.data.sort((a,b) => b.timestamp - a.timestamp).map(i => `[${i.s}] ${i.t}\n${i.l}`).join('\n\n');
+                const cutoff = Date.now() - (this.config.historyHours * 3600000);
+                const txt = this.data
+                    .filter(i => i.timestamp >= cutoff)
+                    .sort((a,b) => b.timestamp - a.timestamp)
+                    .map(i => `[${i.s}] ${i.t}`).join('\n');
                 navigator.clipboard.writeText(txt);
+                this.log("Synthèse copiée dans le presse-papier.", "green");
             }
         };
 
-        App.init();
+        // Lancement effectif
+        window.onload = () => App.init();
     </script>
 </body>
 </html>
