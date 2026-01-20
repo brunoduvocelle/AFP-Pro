@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>AFP PRO - Veille Maîtrisée (V2.6)</title>
+    <title>AFP PRO - Veille Maîtrisée (V2.7)</title>
     <style>
         :root {
             --bg: #050505; --panel: #111; --border: #2a2a2a;
@@ -13,18 +13,36 @@
         body { 
             font-family: 'Segoe UI', system-ui, sans-serif; 
             background: var(--bg); color: var(--text);
-            display: grid; grid-template-columns: 1fr 340px; height: 100vh; overflow: hidden;
+            display: grid; 
+            grid-template-columns: 1fr 340px; /* PC */
+            height: 100vh; overflow: hidden;
+        }
+
+        /* --- RESPONSIVE MOBILE --- */
+        @media (max-width: 900px) {
+            body {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+                overflow-y: auto;
+            }
+            aside {
+                border-left: none !important;
+                border-bottom: 1px solid var(--border);
+                height: auto !important;
+                order: -1; /* Place la config en haut sur mobile */
+            }
+            #feed { height: auto !important; }
         }
 
         /* --- FLUX (GAUCHE) --- */
         #feed { 
-            padding: 30px; overflow-y: auto; 
+            padding: 20px; overflow-y: auto; 
             background: radial-gradient(circle at top left, #1a1a1a 0%, var(--bg) 40%);
         }
 
         .news-card {
             background: var(--panel); border: 1px solid var(--border); 
-            padding: 18px; margin-bottom: 15px; border-radius: 6px;
+            padding: 15px; margin-bottom: 12px; border-radius: 6px;
             border-left: 3px solid #444; position: relative;
             animation: fadeIn 0.4s ease; cursor: pointer;
         }
@@ -37,37 +55,38 @@
         .source-badge { color: var(--accent); }
         .time-badge { color: #888; font-family: monospace; }
         
-        .title { font-size: 1.1rem; color: #fff; margin-bottom: 6px; line-height: 1.35; }
+        .title { font-size: 1.05rem; color: #fff; margin-bottom: 6px; line-height: 1.3; }
         .desc { font-size: 0.85rem; color: #999; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
         /* --- SIDEBAR (DROITE) --- */
         aside { 
             background: #000; border-left: 1px solid var(--border); 
             display: flex; flex-direction: column; padding: 15px; gap: 15px;
+            overflow-y: auto;
         }
 
-        .panel-box { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 15px; }
-        .stat-big { font-size: 28px; font-weight: bold; color: var(--success); }
+        .panel-box { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+        .stat-big { font-size: 24px; font-weight: bold; color: var(--success); }
         .stat-label { font-size: 9px; color: #666; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 1px;}
 
-        .control-group { margin-top: 10px; }
+        .control-group { margin-top: 8px; }
         .control-label { font-size: 10px; color: #aaa; display: block; margin-bottom: 4px; }
         select {
             width: 100%; background: #000; color: #fff; border: 1px solid #333;
             padding: 6px; border-radius: 4px; font-size: 11px; cursor: pointer;
         }
 
-        .source-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+        .source-list { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 10px; }
         .source-item { 
             display: flex; justify-content: space-between; align-items: center; 
-            font-size: 11px; padding: 5px 8px; background: #080808; border-radius: 4px; 
+            font-size: 10px; padding: 4px 6px; background: #080808; border-radius: 4px; 
         }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #333; transition: background 0.3s; }
+        .dot { width: 6px; height: 6px; border-radius: 50%; background: #333; transition: background 0.3s; }
         .dot.ok { background: var(--success); box-shadow: 0 0 4px var(--success); }
         .dot.err { background: var(--fail); }
 
         .log-container { 
-            flex: 1; overflow-y: auto; font-family: monospace; font-size: 10px; 
+            flex: 1; min-height: 100px; overflow-y: auto; font-family: monospace; font-size: 10px; 
             color: #555; border-top: 1px solid var(--border); padding-top: 10px; 
         }
         .log-entry { margin-bottom: 3px; border-bottom: 1px solid #111; padding-bottom: 2px; }
@@ -75,26 +94,27 @@
         button {
             width: 100%; padding: 10px; background: var(--accent); color: white;
             border: none; border-radius: 4px; font-weight: bold; cursor: pointer;
-            margin-top: 10px; font-size: 12px;
+            margin-top: 8px; font-size: 11px;
         }
         button.secondary { background: #222; color: #ccc; margin-top: 5px; }
 
-        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 999; }
-        .modal-content { width: 85%; max-width: 650px; background: #111; border: 1px solid #333; padding: 30px; border-radius: 10px; position: relative; }
+        /* MODAL */
+        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { width: 90%; max-width: 650px; background: #111; border: 1px solid #333; padding: 20px; border-radius: 10px; position: relative; max-height: 90vh; overflow-y: auto; }
         
         .btn-back {
             background: #222; color: #fff; border: 1px solid #444;
             padding: 8px 15px; border-radius: 5px; cursor: pointer;
-            font-size: 12px; margin-bottom: 20px;
+            font-size: 12px; margin-bottom: 15px;
         }
     </style>
 </head>
 <body>
 
     <main id="feed">
-        <div style="text-align:center; padding-top:150px; color:#444;">
+        <div style="text-align:center; padding-top:100px; color:#444;">
             <h2>SYSTÈME PRÊT</h2>
-            <p>Chargement automatique des dépêches en cours...</p>
+            <p>Scan automatique au démarrage...</p>
         </div>
     </main>
 
@@ -127,7 +147,7 @@
         </div>
 
         <div class="panel-box">
-            <div class="stat-label">État des Connexions</div>
+            <div class="stat-label">Connexions</div>
             <div class="source-list" id="source-status"></div>
         </div>
 
@@ -158,17 +178,14 @@
             ],
 
             init() {
-                // 1. Initialiser l'interface des sources
-                document.getElementById('source-status').innerHTML = this.sources.map(s => `
+                const statusEl = document.getElementById('source-status');
+                statusEl.innerHTML = this.sources.map(s => `
                     <div class="source-item"><span>${s.name}</span><span id="dot-${s.id}" class="dot"></span></div>
                 `).join('');
                 
-                // 2. Charger les réglages (lance aussi le timer)
                 this.updateSettings();
-                
-                // 3. LANCEMENT IMMÉDIAT DU SCAN (Correction)
                 this.manualScan();
-                this.log("Initialisation terminée : Scan automatique lancé.", "info");
+                this.log("Initialisation OK - Premier scan lancé.", "info");
             },
 
             updateSettings() {
@@ -178,12 +195,13 @@
                 if (this.timer) clearInterval(this.timer);
                 this.timer = setInterval(() => this.manualScan(), this.config.freq);
                 
-                this.log(`Paramètres : ${this.config.freq/1000}s | Hist : ${this.config.historyHours}h`, 'info');
+                this.log(`Cycle : ${this.config.freq/1000}s | Filtre : ${this.config.historyHours}h`, "info");
                 this.rebuildFeed(); 
             },
 
             log(msg, type = '') {
                 const el = document.getElementById('logs');
+                if(!el) return;
                 const div = document.createElement('div');
                 div.className = `log-entry ${type}`;
                 div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
@@ -196,7 +214,7 @@
             },
 
             async manualScan() {
-                this.log("Cycle de scan actif...", "info");
+                this.log("Scan des sources...", "info");
                 this.sources.forEach(src => this.fetchSource(src));
             },
 
@@ -221,7 +239,6 @@
                     }
                 } catch (e) {
                     this.updateDot(src.id, 'err');
-                    this.log(`Erreur flux : ${src.name}`, 'red');
                 }
             },
 
@@ -231,7 +248,6 @@
                     const itemDate = new Date(item.date).getTime();
                     if (isNaN(itemDate)) return;
                     
-                    // Clé unique basée sur titre + source
                     const id = btoa(unescape(encodeURIComponent(item.t + item.s))).substring(0, 32);
                     if (!this.registry.has(id)) {
                         this.registry.add(id);
@@ -272,11 +288,12 @@
             },
 
             openModal(item) {
-                document.getElementById('modal-text').innerHTML = `
+                const modalText = document.getElementById('modal-text');
+                modalText.innerHTML = `
                     <h3 style="color:var(--accent)">${item.s}</h3>
-                    <h1 style="margin:10px 0 20px 0">${item.t}</h1>
-                    <div style="line-height:1.6; color:#ccc">${item.d}</div>
-                    <br><a href="${item.l}" target="_blank" style="color:var(--accent)">Accéder à l'article complet ↗</a>
+                    <h1 style="margin:10px 0 20px 0; color:white; font-size:1.4rem;">${item.t}</h1>
+                    <div style="line-height:1.6; color:#ccc; font-size:0.95rem;">${item.d}</div>
+                    <br><a href="${item.l}" target="_blank" style="color:var(--accent); font-weight:bold; text-decoration:none;">Lire l'article original ↗</a>
                 `;
                 document.getElementById('modal').style.display = 'flex';
             },
@@ -289,12 +306,17 @@
                     .filter(i => i.timestamp >= cutoff)
                     .sort((a,b) => b.timestamp - a.timestamp)
                     .map(i => `[${i.s}] ${i.t}`).join('\n');
-                navigator.clipboard.writeText(txt);
-                this.log("Synthèse copiée dans le presse-papier.", "green");
+                
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(txt).then(() => {
+                        this.log("Synthèse copiée !", "green");
+                    });
+                } else {
+                    alert("Appareil non supporté pour la copie automatique.");
+                }
             }
         };
 
-        // Lancement effectif
         window.onload = () => App.init();
     </script>
 </body>
