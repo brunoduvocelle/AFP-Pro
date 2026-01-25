@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>AFP PRO - Veille Maîtrisée (V2.7)</title>
+    <title>AFP PRO - Veille Maîtrisée (V2.8)</title>
     <style>
         :root {
             --bg: #050505; --panel: #111; --border: #2a2a2a;
@@ -29,7 +29,7 @@
                 border-left: none !important;
                 border-bottom: 1px solid var(--border);
                 height: auto !important;
-                order: -1; /* Place la config en haut sur mobile */
+                order: -1; 
             }
             #feed { height: auto !important; }
         }
@@ -305,11 +305,15 @@
                 const txt = this.data
                     .filter(i => i.timestamp >= cutoff)
                     .sort((a,b) => b.timestamp - a.timestamp)
-                    .map(i => `[${i.s}] ${i.t}`).join('\n');
+                    .map(i => {
+                        const cleanDesc = (i.d || "").replace(/<[^>]*>?/gm, '').trim();
+                        return `[${i.s}] ${i.t}\n${cleanDesc}\n`;
+                    }).join('\n---\n\n');
                 
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(txt).then(() => {
-                        this.log("Synthèse copiée !", "green");
+                        this.log("Synthèse complète copiée !", "info");
+                        alert("Synthèse (Titres + Descriptions) copiée dans le presse-papier.");
                     });
                 } else {
                     alert("Appareil non supporté pour la copie automatique.");
