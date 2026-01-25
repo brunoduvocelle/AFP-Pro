@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>AFP PRO - Veille Maîtrisée (V2.8)</title>
+    <title>AFP PRO - Veille Maîtrisée (V2.9)</title>
     <style>
         :root {
             --bg: #050505; --panel: #111; --border: #2a2a2a;
@@ -47,7 +47,6 @@
             animation: fadeIn 0.4s ease; cursor: pointer;
         }
         .news-card:hover { border-left-color: var(--accent); background: #161616; }
-        .news-card.fresh { border-left-color: var(--success); }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
 
@@ -182,20 +181,16 @@
                 statusEl.innerHTML = this.sources.map(s => `
                     <div class="source-item"><span>${s.name}</span><span id="dot-${s.id}" class="dot"></span></div>
                 `).join('');
-                
                 this.updateSettings();
                 this.manualScan();
-                this.log("Initialisation OK - Premier scan lancé.", "info");
+                this.log("Initialisation OK.", "info");
             },
 
             updateSettings() {
                 this.config.freq = parseInt(document.getElementById('freq-select').value);
                 this.config.historyHours = parseInt(document.getElementById('hist-select').value);
-                
                 if (this.timer) clearInterval(this.timer);
                 this.timer = setInterval(() => this.manualScan(), this.config.freq);
-                
-                this.log(`Cycle : ${this.config.freq/1000}s | Filtre : ${this.config.historyHours}h`, "info");
                 this.rebuildFeed(); 
             },
 
@@ -214,7 +209,6 @@
             },
 
             async manualScan() {
-                this.log("Scan des sources...", "info");
                 this.sources.forEach(src => this.fetchSource(src));
             },
 
@@ -225,7 +219,6 @@
                     const parser = new DOMParser();
                     const xml = parser.parseFromString(data.contents, "text/xml");
                     const nodes = Array.from(xml.querySelectorAll("item"));
-                    
                     if (nodes.length > 0) {
                         const items = nodes.map(i => ({
                             t: i.querySelector("title")?.textContent,
@@ -247,7 +240,6 @@
                 items.forEach(item => {
                     const itemDate = new Date(item.date).getTime();
                     if (isNaN(itemDate)) return;
-                    
                     const id = btoa(unescape(encodeURIComponent(item.t + item.s))).substring(0, 32);
                     if (!this.registry.has(id)) {
                         this.registry.add(id);
@@ -255,26 +247,22 @@
                         added = true;
                     }
                 });
-
                 if (added) this.rebuildFeed();
             },
 
             rebuildFeed() {
                 const feed = document.getElementById('feed');
                 const cutoff = Date.now() - (this.config.historyHours * 3600000);
-                
                 const filteredData = this.data
                     .filter(item => item.timestamp >= cutoff)
                     .sort((a, b) => b.timestamp - a.timestamp);
 
                 if (filteredData.length > 0) feed.innerHTML = '';
-                
                 filteredData.forEach(item => {
                     const card = document.createElement('div');
                     card.className = 'news-card';
                     const d = new Date(item.timestamp);
                     const timeStr = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')} - ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
-
                     card.innerHTML = `
                         <div class="meta"><span class="source-badge">${item.s}</span><span class="time-badge">${timeStr}</span></div>
                         <h3 class="title">${item.t}</h3>
@@ -283,7 +271,6 @@
                     card.onclick = () => this.openModal(item);
                     feed.appendChild(card);
                 });
-                
                 document.getElementById('total-count').textContent = filteredData.length;
             },
 
@@ -312,11 +299,8 @@
                 
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(txt).then(() => {
-                        this.log("Synthèse complète copiée !", "info");
-                        alert("Synthèse (Titres + Descriptions) copiée dans le presse-papier.");
+                        this.log("Synthèse copiée (Silencieux)", "success");
                     });
-                } else {
-                    alert("Appareil non supporté pour la copie automatique.");
                 }
             }
         };
